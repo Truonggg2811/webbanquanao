@@ -52,8 +52,8 @@
                 <option selected="0"> Xếp theo mặc định</option>
                 <option value="1">Xếp theo lượt xem</option>
                 <option value="2">Xếp theo ngày thêm mới nhất</option>
-                <option value="3">Giá từ nhỏ tới lớn</option>
-                <option value="4">Giá từ lớn tới nhỏ</option>
+                <option value="3">Giá từ thấp đến cao</option>
+                <option value="4">Giá từ cao đến thấp</option>
               </select>
           </li>
           <li class="list-inline-item d-none d-lg-block ms-7">
