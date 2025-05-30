@@ -783,3 +783,200 @@ if(isset($_GET['act'])){
             include "view/listsanpham/list.php";
             break;
         }
+         case 'checkout':{
+            if(!isset($_SESSION['ten_khach_hang'])){
+                $_SESSION['faill_login'] = "Bạn chưa đăng nhập";
+                header("location:index.php?act=login");
+            } 
+            
+            if(isset($_POST['submit'])){
+                //do validate
+                $error = [];
+                if(empty($_POST['name'])){
+                    $error['hoten'] = "Bạn chưa nhập họ tên";
+                }
+                if(empty($_POST['sdt'])){
+                    $error['sdt'] = "Bạn chưa nhập số điện thoại";
+                }
+                if(empty($_POST['diachi'])){
+                    $error['diachi'] = "Bạn chưa nhập địa chỉ";
+                }   
+                if(empty($error)){
+                    $ten_khach_hang = $_POST['name'];
+                    $sdt = $_POST['sdt'];
+                    $dia_chi = $_POST['diachi'];
+                    $email = $_SESSION['email'];
+                    if(isset( $_SESSION['total_discount'])){
+                        $ma_giam_gia = $_SESSION['total_discount'];
+                    } else {
+                        $ma_giam_gia = 0;
+                    }
+                    $ma_khach_hang = $_SESSION['ma_khach_hang'];
+                    $phuong_thuc_thanh_toan = $_POST['phuong_thuc'];
+                    $ghi_chu_kh = $_POST['ghichu_kh'];
+                    account_update_diachi_sdt($dia_chi,$sdt,$ma_khach_hang);
+
+                    if($phuong_thuc_thanh_toan == 0){
+                        donhang_create($ma_khach_hang, $ghi_chu_kh, $phuong_thuc_thanh_toan,$ma_giam_gia);
+                        $ma_don_hang = pdo_get_insert_id();
+                        $_SESSION['ma_don_hang'] = $ma_don_hang;
+                        foreach($_SESSION['cart'] as $value){
+                            extract($value);
+                            donhang_insert_ctdonhang($ma_don_hang, $ma_san_pham, $so_luong, $giam_gia, $size , $mau);
+                            drop_so_luong($ma_san_pham, $so_luong);
+                        }
+                            $don_hang_ct = donhang_get_chi_tiet($_SESSION['ma_don_hang']);
+                            $toal = donhang_toal_finnal($_SESSION['ma_don_hang']);
+                            foreach($toal as $value){
+                                extract($value);
+                            }
+                        $mail = new PHPMailer(true);                              // Passing `true` enables exceptions
+                        try {
+                            //Server settings
+                            $mail->SMTPDebug = 0;                               // Enable verbose debug output
+                            $mail->isSMTP();                                      // Set mailer to use SMTP
+                            $mail->Host = 'smtp.office365.com';  // Specify main and backup SMTP servers
+                            $mail->SMTPAuth = true;                               // Enable SMTP authentication
+                            $mail->Username = 'akonda4543@outlook.com';           // Your Outlook email address
+                            $mail->Password = 'B@2004.com';              // Your Outlook email password
+                            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS; 
+                            $mail->Port = 587;  
+                            $mail->CharSet = 'UTF-8';                                    // TCP port to connect to
+                            //Recipients
+                            $mail->setFrom("akonda4543@outlook.com", 'Crown Store');
+                            $mail->addAddress("$email");     // Add a recipient
+                            // Content
+                            $mail->isHTML(true);                                  // Set email format to HTML
+                            $mail->Subject = 'Cảm ơn bạn đã mua hàng tại Crown Store mã đơn hàng của bạn là: #'.$ma_don_hang.'';
+                            $mail->Body = '
+                            <!DOCTYPE html>
+                            <html lang="en">
+                            <head>
+                                <meta charset="UTF-8">
+                                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                                <title>Chi tiết đơn hàng</title>
+                                <style>
+                                body {
+                                    font-family: Arial, sans-serif;
+                                    line-height: 1.6;
+                                }
+                            
+                                .container {
+                                    max-width: 600px;
+                                    margin: 0 auto;
+                                }
+                            
+                                .header {
+                                    background-color: #4CAF50;
+                                    color: #fff;
+                                    text-align: center;
+                                    padding: 20px;
+                                }
+                            
+                                .order-details {
+                                    margin-top: 20px;
+                                }
+                            
+                                table {
+                                    width: 100%;
+                                    border-collapse: collapse;
+                                    margin-bottom: 20px;
+                                }
+                            
+                                th, td {
+                                    border: 1px solid #ddd;
+                                    padding: 8px;
+                                    text-align: left;
+                                }
+                            
+                                th {
+                                    background-color: #4CAF50;
+                                    color: white;
+                                }
+                            
+                                .footer {
+                                    margin-top: 20px;
+                                    text-align: center;
+                                    padding: 10px;
+                                    background-color: #f1f1f1;
+                                }
+                            </style>
+                            </head>
+                            <body>
+                                <div class="container">
+                                    <div class="header">
+                                        <h2>Chi tiết đơn hàng</h2>
+                                    </div>
+                                                    
+                                                    <div class="order-details">
+                                                <h3>Đơn hàng #'.$ma_don_hang.'</h3>
+                                                <p>Cảm ơn bạn đã đặt hàng. Dưới đây là chi tiết đơn hàng của bạn:</p>
+
+                                                <div class="product">
+                                                    <table>
+                                                        <tr>
+                                                            <th>Tên Sản Phẩm</th>
+                                                            <th>Size</th>
+                                                            <th>Số Lượng</th>
+                                                            <th>Giá</th>
+                                                        </tr>';
+                            
+                                                        foreach ($don_hang_ct as $item) {
+                                                            $mail->Body .= '
+                                                                <tr>
+                                                                    <td>'.$item['ten_san_pham'].'</td>
+                                                                    <td>'.$item['size'].','.$item['mau'].'</td>
+                                                                    <td>'.$item['so_luong'].'</td>
+                                                                    <td>'.number_format($item['don_gia'], 0, ',', '.').'đ</td>
+                                                                </tr>';
+                                                        }
+                                                        
+                                        $mail->Body .= '
+                                        <p><strong>Tổng cộng:</strong> '.number_format($tong_gia_don_hang_giam, 0, ',', '.').'đ</p>
+                                        <p><strong>Phương thức thanh toán:</strong>Giao tiền khi nhận hàng (COD)</p>
+                                    </div>
+                            
+                                    <div class="footer">
+                                        <p>Chúng tôi sẽ liên hệ với bạn trong thời gian sớm nhất. Cảm ơn bạn đã mua hàng tại cửa hàng của chúng tôi.</p>
+                                       <button><a href="http://localhost/DU_AN_1/index.php?act=chitietdh&ma_don_hang='.$ma_don_hang.'">Xem chi tiết đơn hàng</a></button>
+                                        
+                                    </div>
+                                </div>
+                            </body>
+                            </html>';
+                            $mail->AltBody = 'This is the body in plain text for non-HTML mail clients';
+                            $mail->send();
+                        } catch (Exception $e) {
+                            echo 'Message could not be sent. Mailer Error: ', $mail->ErrorInfo;
+                        }
+
+                        unset($_SESSION['cart']);
+                        unset($_SESSION['total_discount']);
+                        unset($_SESSION['ma_giam_gia']);
+                        unset($_SESSION['total_after_discount']);
+
+                        extract($don_hang_ct);  
+                    //    ShowArray($don_hang_ct);   
+                    //    ShowArray($toal);   
+                    //    echo number_format($toal['tong_gia_don_hang'], 0, ',', '.');
+                        $_SESSION['sussecc'] = "Đặt hàng thành công! cảm ơn bạn đã mua hàng của chúng tôi";
+                        header("location:index.php?act=order_complete");        
+
+                        
+                    } 
+                    if($phuong_thuc_thanh_toan == 1){
+                        donhang_create($ma_khach_hang, $ghi_chu_kh, $phuong_thuc_thanh_toan,$ma_giam_gia);
+                        $ma_don_hang = pdo_get_insert_id();
+                        $_SESSION['ma_don_hang'] = $ma_don_hang;
+                        foreach($_SESSION['cart'] as $value){
+                            extract($value);
+                            donhang_insert_ctdonhang($ma_don_hang, $ma_san_pham, $so_luong, $giam_gia, $size, $mau);
+                            drop_so_luong($ma_san_pham, $so_luong);
+                        }
+                        donhang_update_trangthai($ma_don_hang, 2);  
+                        $don_hang_ct = donhang_get_chi_tiet($_SESSION['ma_don_hang']);
+                        $toal = donhang_toal_finnal($_SESSION['ma_don_hang']);
+                        foreach($toal as $value){
+                            extract($value);
+                        }
+                    $mail = new PHPMailer(true);                              // Passing `true` enables exceptions
